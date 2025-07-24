@@ -73,6 +73,6 @@ class NeuralRegressor:
     def predict(self, x):
         x = np.array(x)
         z1 = x @ self.w1 + self.b1
-        a1 = self.leaky_relu(z1)
+        a1 = self.swish(z1)
         yhat = a1 @ self.w2 + self.b2
         return yhat
