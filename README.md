@@ -1,139 +1,195 @@
-# NN Regressor with Overclock Mechanism
+# Overclock Neural Network (OCNN)
 
-Welcome. This repo contains a neural network I built from scratch using NumPy. It doesn't use PyTorch, TensorFlow, or any ML library. The key highlight is a mechanism I call **Overclock**, which isn't for increasing the learning rate blindly—it’s about **controlling** it when loss oscillations begin, helping convergence on difficult regressions.
+The **Overclock Neural Network** is a custom-built neural network written in NumPy, designed to explore learning rate dynamics, fast convergence strategies, and deeper mathematical understanding of backpropagation. It introduces an "Overclock" mechanism — an intuitive way to control the speed of learning — while keeping full transparency into the inner workings of training.
 
-## 📌 Goal
-
-Assume you know nothing about how a neural network works. This project explains everything: forward pass, backpropagation, gradients, dimensions, and training—using vectorized NumPy code for speed and clarity.
+This README explains **why** each part of the neural network exists, and **how** it all fits together.
 
 ---
 
-## 📐 Architecture
+## 🚀 Why Use Neural Networks?
 
-This NN is a **fully connected feedforward neural network**. Here’s the setup:
+Neural Networks can **approximate complex, non-linear functions**. They're inspired by how neurons fire in the brain, but more importantly, they let us learn patterns in data — be it numbers, images, sounds, or actions.
 
-- Input: `X` shape `(m, n)` → `m` samples, `n` features.
-- Hidden Layer: 1 layer, custom neurons (can be increased).
-- Activation: Swish (`swish(x) = x * sigmoid(x)`)
-- Output: Linear activation (for regression).
-- Loss: Mean Squared Error (MSE)
+You could train a neural network to learn anything from predicting fruits to detecting objects in real-time. But to understand them deeply, you have to know *how* each component affects the outcome — mathematically and intuitively.
 
 ---
 
-## ⚙️ Forward Pass
+## 🧠 Why Do We Need Activation Functions?
 
-Let:
-- `W1` = weights from input to hidden layer → shape `(n, h)`
-- `b1` = bias vector for hidden layer → shape `(1, h)`
-- `W2` = weights from hidden to output → shape `(h, 1)`
-- `b2` = output bias → shape `(1, 1)`
+### The Problem:
+Without activation functions, a neural network becomes just a stack of linear transformations — matrix multiplications and bias additions. Mathematically:
 
-Then, the steps:
-
-```python
-Z1 = X @ W1 + b1              # shape: (m, h)
-A1 = swish(Z1)                # shape: (m, h)
-Z2 = A1 @ W2 + b2             # shape: (m, 1)
-Y_pred = Z2                   # shape: (m, 1)
+```
+y = W2 · (W1 · x + b1) + b2
 ```
 
-Loss:
+This whole thing simplifies to a single linear transformation:
+
+```
+y = W · x + b
+```
+
+It can't learn *non-linear* patterns like `sin(x)`, XOR, or digit shapes.
+
+### The Solution:
+Activation functions like `ReLU`, `Swish`, or `Sigmoid` introduce **non-linearity** into the network. That means your model can now bend the space and curve the decision boundary, rather than just drawing straight lines.
+
+**Swish activation**, which you use, is defined as:
+
+```
+swish(x) = x * sigmoid(x)
+```
+
+Why swish?
+- It's **smooth** and **non-monotonic**
+- Allows better gradient flow than ReLU in some cases
+- Encourages small negative values instead of zeroing them out
+
+---
+
+## 🎯 How Does a Neural Network Learn?
+
+Neural networks learn by adjusting their parameters (weights and biases) to reduce the error between predicted output and actual target. This process is called **training**, and it's powered by **gradient descent**.
+
+---
+
+## ⚙️ Why Use Gradient Descent?
+
+The neural network has millions of possible parameter combinations. The goal is to find one that gives the **least error** (or loss).
+
+We treat the **loss function** like a landscape and try to move downhill towards the lowest point. But how do we know where to step?
+
+We use **gradients** — partial derivatives of the loss with respect to each parameter — to guide us.
+
+A gradient tells you:
+- *How sensitive* the loss is to a change in that parameter
+- *Which direction* the parameter should move in to reduce the loss
+
+If the gradient is positive → increasing the parameter increases the loss  
+If the gradient is negative → increasing the parameter decreases the loss
+
+So we go **against** the gradient:
+
+```
+parameter = parameter - learning_rate * gradient
+```
+
+This is the essence of **gradient descent**.
+
+---
+
+## ⚡ Why Use a Learning Rate?
+
+Learning rate is a **scaling factor** that decides how big a step we take during training.
+
+- If it's too small → the model learns too slowly
+- If it's too large → the model overshoots and might never converge
+
+The Overclock NN uses a dynamic learning rate idea — it lets you tweak this "overclock" to balance **speed** and **stability**.
+
+**Overclocking** here means pushing the learning rate higher than usual while using checks like gradient clipping or decay to avoid divergence. It's like putting your model in turbo mode — but with control.
+
+---
+
+## 🧮 How Does Backpropagation Work?
+
+Backpropagation is a method for computing the **gradients** of the loss with respect to every parameter in the network.
+
+Here’s the process:
+
+1. **Forward Pass**: Compute the prediction by passing inputs through the network.
+2. **Loss Calculation**: Compare prediction with true label using a loss function like MSE or Cross-Entropy.
+3. **Backward Pass**:
+    - Apply the chain rule to compute `dL/dW` and `dL/db` for each layer.
+    - These gradients tell how much each weight/bias contributed to the error.
+4. **Parameter Update**: Apply gradient descent to update parameters.
+
+Mathematically:
+
+```
+Z1 = W1 · X + b1
+A1 = swish(Z1)
+
+Z2 = W2 · A1 + b2
+A2 = prediction
+
+Loss = MSE(A2, Y)
+
+dLoss/dW2 = (A2 - Y) · A1.T
+dLoss/dW1 = ((W2.T · (A2 - Y)) ⊙ swish'(Z1)) · X.T
+```
+
+Where ⊙ is element-wise multiplication, and `swish'(x)` is the derivative of Swish.
+
+---
+
+## 🧪 Why Use Mini-Batch (Matrix-Based) Training?
+
+Instead of feeding one sample at a time, you can process a whole **batch** of inputs at once using matrices. This speeds up computation (especially on GPUs) and improves gradient estimation.
+
+Matrix shapes:
+
+- `X`: shape `(features, batch_size)`
+- `W`: shape `(neurons, features)`
+- `Z`: shape `(neurons, batch_size)`
+- `A`: shape `(neurons, batch_size)`
+
+Matrix-based training = fast, efficient, and works well with libraries like NumPy.
+
+---
+
+## 💡 What Makes Overclock NN Special?
+
+- **Swish activation**: smooth and expressive
+- **Overclock mechanism**: tweak learning rate to speed up training
+- **Modular code**: easy to plug in new activations, optimizers, loss functions
+- **Pure NumPy**: clean, transparent logic without hidden black boxes
+
+---
+
+## 📚 How to Use
+
 ```python
-Loss = np.mean((Y_pred - Y) ** 2)      ## shape: scalar
+from ocnn import OverclockNN
+
+model = OverclockNN(input_size=4, hidden_size=10, output_size=3, activation='swish')
+
+model.train(X_train, Y_train, epochs=3000, batch_size=16, overclock_factor=1.5, learning_rate=0.1)
+
+predictions = model.predict(X_test)
 ```
 
 ---
 
-## 🔁 Backpropagation: Full Derivation (with Dimensions)
+## 🛠️ Roadmap
 
-We want to compute gradients for `W1`, `b1`, `W2`, `b2` to do gradient descent.
+- Add learning rate decay
+- Add other activations (Leaky ReLU, Tanh)
+- Add classification metrics (accuracy, F1)
+- Save and load weights
 
-Let:
-- `dZ2 = dLoss/dZ2 = 2 * (Y_pred - Y) / m` → shape `(m, 1)`
-- `dW2 = A1.T @ dZ2` → shape `(h, 1)`
-- `db2 = np.sum(dZ2, axis=0, keepdims=True)` → shape `(1, 1)`
+---
 
-Now for the hidden layer:
+## 📎 Summary of Core Ideas
 
-Swish derivative:
-```python
-sigmoid = lambda x: 1 / (1 + np.exp(-x))
-swish_grad = lambda x: sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
+- **Why gradient descent?** To find the direction that reduces error
+- **Why learning rates?** To control the step size in training
+- **Why activations?** To model non-linear patterns
+- **Why matrices?** To scale training efficiently
+- **Why swish?** For smoother gradients and richer learning
+- **Why overclock?** To learn faster when it works, and back off when it doesn’t
+
+---
+
+## 🔗 Related Projects
+
+- [Pure Python NN](./pure_python_nn/README.md) — a from-scratch neural network without NumPy
+
+---
+
+## 🧠 Final Thought
+
+Neural networks aren’t just code — they’re **mathematical ideas brought to life**. This project aims to make every step visible and intuitive, while still being fast and scalable.
+
+Use it. Break it. Understand it.
 ```
-
-Then:
-```python
-dA1 = dZ2 @ W2.T                         # shape: (m, h)
-dZ1 = dA1 * swish_grad(Z1)              # shape: (m, h)
-dW1 = X.T @ dZ1                         # shape: (n, h)
-db1 = np.sum(dZ1, axis=0, keepdims=True)  # shape: (1, h)
-```
-
----
-
-## 🧠 Why Backpropagation Works
-
-The chain rule. That’s it. Backprop computes the partial derivatives of the loss with respect to each parameter, allowing us to take steps in the direction that most reduces the loss.
-
-You update each parameter like this:
-
-```python
-W2 -= lr * dW2
-b2 -= lr * db2
-W1 -= lr * dW1
-b1 -= lr * db1
-```
-
-The gradients **tell you how much** and **in what direction** each weight should change to minimize the loss. Without them, you'd be guessing blindly.
-
-A partial derivative of a parameter (like a weight or bias) with respect to the loss tells us how sensitive the loss is to changes in that parameter. In other words, it shows how much the loss would change if we tweak that parameter slightly.
-
-If the gradient is positive, it means increasing that parameter will increase the loss — so we should decrease the parameter to reduce the loss.
-
-If the gradient is negative, it means increasing the parameter will decrease the loss — so increasing it is a good move.
-
-But there’s a catch: if you just do parameter += gradient, you'll actually go in the wrong direction, increasing the loss instead of decreasing it. That’s why we flip the sign and do:
-
-
-parameter -= learning_rate * gradient
-
-Multiplying the gradient by -1 makes sure we move in the direction that minimizes the loss.
-
----
-
-## 🌀 Overclock Mechanism
-
-This isn't a standard LR scheduler. Here's the idea:
-
-1. Use an aggressive learning rate (`lr = 0.1`) with no decay.
-2. Train one model fully like this.
-3. Then, take another model initialized with the **same random seed/weights**.
-4. Watch the loss. When it **starts oscillating**, activate Overclock:
-   - Set `lr += overclock_amount` (can be negative).
-   - This "Overclock" slows the training at just the right moment.
-
-It’s like **manually controlled learning rate decay** based on observing the training curve.
-
-This avoids early plateau or divergence that a static scheduler can’t catch.
-
----
-
-## 📚 Why Use Learning Rates?
-
-Because gradients alone aren’t enough. You need a scalar multiplier (`lr`) to control the **step size**. Too small = slow. Too large = divergence. Overclock gives you the control to time it just right.
-
----
-
-## ✅ Coming Soon
-
-I'll link to my other repo that uses **pure Python**, without NumPy—made for educational purposes to show how neural networks really work, one scalar at a time.
-
----
-
-## 🔓 Final Thoughts
-
-This project helped me understand backpropagation, gradients, and the importance of inspecting loss trends manually. The Overclock mechanism wasn’t born from theory—it came from **observation** and **experimentation**.
-
-
-
-Stay tuned for more.
